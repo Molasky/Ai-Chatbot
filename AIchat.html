@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Mode Chat</title>
+    <style>
+        :root {
+            --bg-dark: #131314;
+            --user-bubble: #2b2c2f;
+            --text-main: #e3e3e3;
+            --input-bg: #1e1f20;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Message Container */
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 10% 120px 10%;
+            gap: 24px;
+        }
+
+        /* Generic Bubble Style */
+        .message {
+            max-width: 80%;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* User Message (Right Side) */
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-bubble);
+            padding: 12px 20px;
+            border-radius: 24px;
+            color: white;
+        }
+
+        /* AI Message (Left Side) */
+        .ai-message {
+            align-self: flex-start;
+            background-color: transparent;
+            padding: 12px 0;
+            width: 100%;
+        }
+
+        .ai-content {
+            max-width: 90%;
+        }
+
+        /* Input Area */
+        .input-wrapper {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            background-color: var(--input-bg);
+            border-radius: 32px;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 14px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            background: transparent;
+            color: #8ab4f8;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+
+        button:hover {
+            color: white;
+        }
+
+        /* Formatting Helpers */
+        img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
+        strong { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div id="chat-window">
+        <div class="message ai-message">
+            <div class="ai-content">Hello! How can I help you today?</div>
+        </div>
+    </div>
+
+    <div class="input-wrapper">
+        <input type="text" id="userInput" placeholder="Enter a prompt here">
+        <button id="sendBtn">➤</button>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById("chat-window");
+        const input = document.getElementById("userInput");
+        const btn = document.getElementById("sendBtn");
+
+        const handleChat = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 1. Add User Bubble (Right)
+            const userDiv = document.createElement("div");
+            userDiv.className = "message user-message";
+            userDiv.textContent = text;
+            chatWindow.appendChild(userDiv);
+
+            input.value = "";
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);
+
+            // 2. Add AI Placeholder (Left)
+            const aiDiv = document.createElement("div");
+            aiDiv.className = "message ai-message";
+            aiDiv.innerHTML = `<div class="ai-content">...</div>`;
+            chatWindow.appendChild(aiDiv);
+
+            try {
+                const response = await fetch("https://backend.fesinstitute.com/api/public/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text, uid: "v6MWmpQBdjUT1fYMt4iZzXittc13" }),
+                });
+                
+                const data = await response.json();
+                
+                // Format response
+                let formatted = data.reply
+                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                    .replace(/\n/g, "<br>");
+
+                aiDiv.querySelector(".ai-content").innerHTML = `
+                    ${formatted}
+                    ${data.imageUrl ? `<img src="${data.imageUrl}">` : ""}
+                `;
+            } catch (err) {
+                aiDiv.querySelector(".ai-content").textContent = "Sorry, I hit a snag.";
+            }
+            
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);
+        };
+
+        btn.onclick = handleChat;
+        input.onkeypress = (e) => { if (e.key === "Enter") handleChat(); };
+    </script>
+</body>
+</html>
